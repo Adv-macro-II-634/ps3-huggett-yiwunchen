@@ -47,7 +47,7 @@ while abs(aggsav) >= 0.01 ;
       % compute the utility value for all possible combinations of a and a'
       value_mat = ret + beta * repmat(PI(1,:)*v_guess, [num_a 1]);
       
-      % find the optimal k' for every k:
+      % find the optimal a' for every a:
       [vfn, pol_indx] = max(value_mat, [], 2);
       
       vfn=[vfn(:,:,1)';vfn(:,:,2)'];
