@@ -12,7 +12,7 @@ PI = [.97 .03; .5 .5]; % transition matrix
 % ASSET VECTOR
 a_lo = -2; %lower bound of grid points
 a_hi = 5;%upper bound of grid points
-num_a = 10;
+num_a = 100;
 
 a = linspace(a_lo, a_hi, num_a); % asset (row) vector
 % e.g: y = linspace(x1,x2,n) generates n points evenly b/w x1 and x2
@@ -42,43 +42,57 @@ while abs(aggsav) >= 0.01 ;
     v_tol = 1;
     while v_tol >.0001;
       % CONSTRUCT RETURN + EXPECTED CONTINUATION VALUE
+      v_mat=ret+beta*repmat(permute(PI*v_guess, [3 2 1]),[num_a 1 1]);
+      
       % CHOOSE HIGHEST VALUE (ASSOCIATED WITH a' CHOICE)
-        
-      % compute the utility value for all possible combinations of a and a'
-      value_mat = ret + beta * repmat(PI(1,:)*v_guess, [num_a 1]);
-      
       % find the optimal a' for every a:
-      [vfn, pol_indx] = max(value_mat, [], 2);
+      [vfn, pol_indx] = max(v_mat, [], 2);
       
-      vfn=[vfn(:,:,1)';vfn(:,:,2)'];
+      vfn=permute(vfn,[3 1 2]);
       
-      % what is the distance between current guess and value function
-      v_tol = max(abs(vfn - v_guess));
+      v_tol=abs(max(v_guess(:)-vfn(:)));
       
-      % if distance is larger than tolerance, update current guess and
-      % continue, otherwise exit the loop
       v_guess = vfn;
       
-      
-        
-  
     end;
     
     % KEEP DECSISION RULE
+    pol_indx=permute(pol_indx, [3 1 2]);
     pol_fn = a(pol_indx);
     
     % SET UP INITITAL DISTRIBUTION
-
-    
+    Mu=zeros(2,num_a);
+    Mu(1,4)=1;
+     
     % ITERATE OVER DISTRIBUTIONS
-    [emp_ind, a_ind, mass] = find(Mu > 0); % find non-zero indices
+    mu_tol=1;
+    while mu_tol>1e-08
+      [emp_ind, a_ind, mass] = find(Mu > 0); % find non-zero indices
     
-    MuNew = zeros(size(Mu));
-    for ii = 1:length(emp_ind)
+      MuNew = zeros(size(Mu));
+      for ii = 1:length(emp_ind)
         apr_ind = pol_indx(emp_ind(ii), a_ind(ii)); % which a prime does the policy fn prescribe?
         MuNew(:, apr_ind) = MuNew(:, apr_ind) + ... % which mass of households goes to which exogenous state?
-            (PI(emp_ind(ii), :) * mass)';
-    end
+            (PI(emp_ind(ii), :) *Mu(emp_ind(ii), a_ind(ii)))';
+      end
+    
+      mu_tol=max(abs(MuNew(:)-Mu(:)));
+    
+      Mu=MuNew;
  
-        
+   end
+
+   plot(Mu');
+
+   x=sum(sum(Mu.*pol_fn));%mkt clearing condition
+   if x>= 0.1
+     q_min = (q_min + q_max) / 2;
+   else
+     q_max = (q_min + q_max) / 2;
+
+   end
+    
+    q_guess=(q_min + q_max)/2;
+   
+       
 end
